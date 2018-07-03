@@ -138,72 +138,145 @@
             };
 
             var getAppDataFileContent = function (fileId) {
-                function downloadGDriveFile(file) {
-                    debugger;
-                    if (file.downloadUrl) {
-                        var accessToken = gapi.auth.getToken().access_token;
-                        var xhr = new XMLHttpRequest();
-                        xhr.open('GET', file.downloadUrl);
-                        xhr.setRequestHeader('Authorization', 'Bearer ' + accessToken);
-                        xhr.onload = function () {
-                            var content = xhr.responseText;
-                            do_something_with_file_content(file.title, content);
-                        };
-
-                        xhr.onerror = function () {
-                            alert("Download failure.");
-                        };
-
-                        xhr.send();
-                    }
-
-                    else {
-                        alert("Unable to download file.");
-                    }
-                }
-
-                var request = gapi.client.drive.files.get({ 'fileId': fileId });
-                request.execute(downloadGDriveFile);
+                return gapi.client.drive.files
+                    .get({ 'fileId': fileId, alt: 'media' });
             };
 
             var saveAppData = function (fileId, appData) {
-                return gapi.client.drive.files
-                    .create({
-                        resource: {
-                            'id': fileId,
-                            'parents': ['appDataFolder']
-                        },
-                        media: {
-                            mimeType: 'application/json',
-                            body: new Blob([JSON.stringify(appData)], { type: 'application/json' })
-                        },
-                        fields: 'id'
+                return gapi.client
+                    .request({
+                        path: '/upload/drive/v3/files/' + fileId,
+                        method: 'PATCH',
+                        params: { uploadType: 'media' },
+                        body: JSON.stringify(appData)
                     });
             };
 
-            const fileName = "config.json";
-            let file = getAppDataFile(fileName).then(function (e) {
-                if (e === false) {
-                    return createAppDataFile(fileName);
-                }
 
-                return e;
-            })
 
-            file.then(function (e) {
-                getAppDataFileContent(e.fileId);
+            function read(filename) {
+                return gapi.client.drive.files
+                    .list({
+                        q: 'name="' + filename + '"',
+                        spaces: 'appDataFolder',
+                        fields: 'files(id)'
+                    })
+                    .then(function (response) {
+                        // Проверка на наличие файла
+                        if (response.result.files && response.result.files, length > 0) {
+                            // Возврощает индификатор файла
+                            return response.result.files[0].id;
+                        }
 
-                e.appData = {
-                    x: 0,
-                    y: 6
-                };
+                        // Если файла нет создаём его
+                        return gapi.client.drive.files
+                            .create({
+                                fields: 'id',
+                                resource: { name: file, parents: ['appDataFolder'] }
+                            })
+                            .then(function (response) {
+                                return result.id;
+                            });
 
-                let save = saveAppData(e);
+                    }).then(function (id) {
+                        // Получаем контент по ид
+                        return gapi.client.drive.files
+                            .get({ fileId: id, alt: 'media' })
+                            .then(function (response) {
+                                return response.result;
+                            });
+                    });
+            };
 
-                save.then(function (e) {
-                    debugger;
-                });
+            function save(filename, data) {
+                return gapi.client.drive.files
+                    .list({
+                        q: 'name="' + filename + '"',
+                        spaces: 'appDataFolder',
+                        fields: 'files(id)'
+                    })
+                    .then(function (response) {
+                        // Проверка на наличие файла
+                        if (response.result.files && response.result.files, length > 0) {
+                            // Возврощает индификатор файла
+                            return response.result.files[0].id;
+                        }
+
+                        // Если файла нет создаём его
+                        return gapi.client.drive.files
+                            .create({
+                                fields: 'id',
+                                resource: { name: file, parents: ['appDataFolder'] }
+                            })
+                            .then(function (response) {
+                                return result.id;
+                            });
+
+                    }).then(function (id) {
+                        // Запись в файл
+                        return gapi.client
+                            .request({
+                                path: '/upload/drive/v3/files/' + id,
+                                method: 'PATCH',
+                                params: { uploadType: 'media' },
+                                body: JSON.stringify(data)
+                            });
+                    });
+            };
+
+            // save('config.json', { x: 0, y: 16 }).then(function (r) {
+            //     read('config.json').then(function (rs) {
+            //         debugger;
+            //     });
+            // });
+
+            read('config.json').then(function (rs) {
+                debugger;
             });
+
+
+
+            // createAppDataFile('config.json').then(function (r) {
+            //     debugger;
+            //     saveAppData(r.fileId, { x: 0, y: 12 }).then(function (x) {
+            //         debugger;
+
+            //         getAppDataFileContent(x.result.id).then(function (y) {
+            //             debugger;
+            //         });
+
+            //         getAppDataFileContent(r.fileId).then(function (y) {
+            //             debugger;
+            //         });
+            //     });
+            // });
+
+            // saveAppData('1z1U_xqfRtB40MMqdpp9KdLk0zqG8xLyb', { x: 0, y: 12 });
+            // getAppDataFileContent('1z1U_xqfRtB40MMqdpp9KdLk0zqG8xLyb');
+
+            // const fileName = "config.json";
+            // let file = getAppDataFile(fileName).then(function (e) {
+            //     if (e === false) {
+            //         return createAppDataFile(fileName);
+            //     }
+
+            //     return e;
+            // })
+
+            // file.then(function (e) {
+            //     getAppDataFileContent(e.fileId);
+
+            //     e.appData = {
+            //         x: 0,
+            //         y: 6
+            //     };
+
+            //     let save = saveAppData(e);
+
+            //     save.then(function (e) {
+            //         debugger;
+            //     });
+            // });
         }
 
     </script>
